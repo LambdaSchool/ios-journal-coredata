@@ -30,7 +30,7 @@ Even though you haven't yet updated your code to use multiple contexts, you can 
 
 Remember that **any** use of managed objects or a managed object context must be done in a `perform` or `performAndWait` call for non-main-queue contexts. Even for main-queue contexts, it is safe and valid to use `perform` or `performAndWait`.
 
-1. Go through each function that deals with managed objects. Decide whether it should ensure concurrency correctness itself, or whether responsibility for correctness should be left up to its caller. 
+1. Go through each function that deals with managed objects. Decide whether it should ensure concurrency correctness itself, or whether responsibility for correctness should be left up to its caller.
 2. Update each function to do its work using `perform()` or `performAndWait()` on the appropriate context.
 3. Run your app with the `-com.apple.CoreData.ConcurrencyDebug 1` launch argument. Excercise all functions of the app and verify that no Core Data concurrency assertions are triggered (ie. the app shouldn't crash).
 
