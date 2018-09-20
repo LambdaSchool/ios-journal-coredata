@@ -21,7 +21,7 @@ First, you'll set up the ability to PUT entries to Firebase. Since the `Entry` e
 #### Entry+Encodable
 
 1. Create a new Swift file called "Entry+Encodable.swift".
-2. Create an extension on `Entry`, and adopt the `Encodable` protocol. Since you're using "Class Definition" codegen in your data model, you don't have access to the `Entry` class directly. The effect this has is that when you adopt `Encodable`, its required method in can't be synthesized for you. 
+2. Create an extension on `Entry`, and adopt the `Encodable` protocol. Since you're using "Class Definition" codegen in your data model, you don't have access to the `Entry` class directly. The effect this has is that when you adopt `Encodable`, its required method in can't be synthesized for you.
 3. First create a `CodingKeys` enum. It should have string raw values, and adopt the `CodingKey` protocol. Add a case for the five attributes in the `Entry` entity.
 4. Now that you have the coding keys, you can implement the required `public func encode(to encoder: Encoder) throws` method yourself.
     - In the `encode(to encoder: ...)` method, create a variable called `container`. Set use the `encoder` parameter's `container(keyedBy: ...)` method, and pass in `CodingKeys.self` to it.
@@ -48,7 +48,7 @@ Test the app at this point. You should be able to both create and update entries
 
 #### Part 2 - Syncing Databases
 
-Something to keep in mind when trying to sync multiple databases like we are in this case is that you need to make sure you don't duplicate data. For example, say you have an entry saved in your persistent store on the device, and on Firebase. If you were to go about fetching the entries from Firebase and decoding them into `Entry` objects like you've done previously before today, you would end up with a duplicate of the entry in your persistent store. This would occur every single time that you fetch the entry from Firebase. 
+Something to keep in mind when trying to sync multiple databases like we are in this case is that you need to make sure you don't duplicate data. For example, say you have an entry saved in your persistent store on the device, and on Firebase. If you were to go about fetching the entries from Firebase and decoding them into `Entry` objects like you've done previously before today, you would end up with a duplicate of the entry in your persistent store. This would occur every single time that you fetch the entry from Firebase.
 
 The way to prevent this is to create an intermediate data type between the JSON and the `Entry` class that will serve as a temporary representation of an `Entry` without being added to a managed object context.
 
@@ -57,12 +57,12 @@ The way to prevent this is to create an intermediate data type between the JSON 
 1. Create a new Swift file called "EntryRepresentation". In the file, create a struct called `EntryRepresentation`.
 2. Adopt the `Decodable` protocol.
 3. Add a property in this struct for each attribute in the `Entry` model. Their names should match exactly or else the JSON from Firebase will not decode into this struct properly.
-4. Adopt the Equatable protocol. 
+4. Adopt the Equatable protocol.
 5. Outside of the `EntryRepresentation` struct, implement the `==` method. The left hand side (`lhs`) should be of type `EntryRepresentation` and the right hand side (`rhs`) should be an `Entry`.
 6. Implement the `==` method, this time with `Entry` as the left hand side and `EntryRepresentation` as the right hand side. You can simply return `rhs == lhs`, since you've implemented the logic to compare the two objects in the first `==` implementation.
 7. Implement the `!=` method with `EntryRepresentation` as the left hand side, and `Entry` as the right hand side. This should return `!(rhs == lhs)`
-8. Implement the `!=` again but swapping the left hand side's type to `Entry` and `EntryRepresentation` as the right hand side. Simply return `rhs != lhs`. 
-9. In the "Entry+Convenience.swift" file, add a new convenience initializer. This initializer should be failable. It should take in an `EntryRepresentation` parameter. This should simply pass the values from the entry representation to the convenience initializer you made earlier in the project. 
+8. Implement the `!=` again but swapping the left hand side's type to `Entry` and `EntryRepresentation` as the right hand side. Simply return `rhs != lhs`.
+9. In the "Entry+Convenience.swift" file, add a new convenience initializer. This initializer should be failable. It should take in an `EntryRepresentation` parameter. This should simply pass the values from the entry representation to the convenience initializer you made earlier in the project.
 
 #### EntryController
 
@@ -73,28 +73,28 @@ The goal when fetching the entries from Firebase is to go through each fetched e
 
 You'll use the `EntryRepresentation` to do this. It will let you decode the JSON as `EntryRepresentation`s, perform these checks and either create an actual `Entry` if one doesn't exist on the device or update an existing one with its decoded values.
 
-Back in the `EntryController`, you will make a couple methods that will help when fetching the entries from Firebase. 
+Back in the `EntryController`, you will make a couple methods that will help when fetching the entries from Firebase.
 
 1. Create a new "Update" function called `update`. It should take in an `Entry` whose values should be updated, and an `EntryRepresentation` to take the values from. This should simply set each of the `Entry`'s values to the `EntryRepresentation`'s corresponding values. **DO NOT** call `saveToPersistentStore` in this method. It will be explained why later on.
 2. Create a method called `fetchSingleEntryFromPersistentStore`. This method should take in a string that represents an entry's identifier, and return an optional `Entry`. This method should:
-    - Create a fetch request from `Entry` object. 
+    - Create a fetch request from `Entry` object.
     - Give the fetch request an `NSPredicate`. This predicate should see if the `identifier` attribute in the `Entry` is equal to the identifier parameter of this function. Refer to the hint below if you need help with the predicate.
     - <details><summary>Predicate Hint:</summary><p>
-  
+
       `NSPredicate(format: "identifier == %@", identifier)`
 
       </p>
       </details>
     - Perform the fetch request on your core data stack's `mainContext` and return the first `Entry` from the array you get back. In theory, there should only be one entry fetched anyway, because the predicate uses the entry's identifier. Handle the potential error from performing the fetch request.
 3. Create a function called `fetchEntriesFromServer`. It should have a completion closure that returns an optional error and its default value should be an empty closure. This method should:
-    - Take the `baseURL` and add the "json" extension to it. 
+    - Take the `baseURL` and add the "json" extension to it.
     - Perform a GET `URLSessionDataTask` with the url you just set up.
     - In the completion of the data task, check for errors
     - Unwrap the data returned in the closure.
     - Create a variable of type `[EntryRepresentation]`. Set its initial value to an empty array.
     - Decode the data into `[String: EntryRepresentation].self`. Set the value of the array you just made in the previous step to the entry representations in this decoded dictionary. **HINT:** loop through the dictionary to return an array of just the entry representations without the identifier keys.
-    - Loop through the array of entry representations. Inside the loop, create a constant called `entry`. For its value, give it the result of the `fetchSingleEntryFromPersistentStore` method. Pass in the entry representation's identifier. This will allow us to compare the entry representation and see if there is a corresponding entry in the persistent store already. 
-    - Check to see if the entry returned from the persistent store exists. If it does, check whether the entry and the entry representation have the same values. If they do, then you don't need to do anything because the entry on the server and the entry in the persistent store are synchronized. 
+    - Loop through the array of entry representations. Inside the loop, create a constant called `entry`. For its value, give it the result of the `fetchSingleEntryFromPersistentStore` method. Pass in the entry representation's identifier. This will allow us to compare the entry representation and see if there is a corresponding entry in the persistent store already.
+    - Check to see if the entry returned from the persistent store exists. If it does, check whether the entry and the entry representation have the same values. If they do, then you don't need to do anything because the entry on the server and the entry in the persistent store are synchronized.
     - If the entry exists, but the entry and the entry representation's values are not the same, then call the new `update(entry: ...)` method that takes in an entry and an entry representation. This will then synchronize the entry from the persistent store to the updated values from the server's version of the entry.
     - If there was no entry returned from the persistent store, that means the server has an entry that the device does not. In that case, initialize a new `Entry` using the convenience initializer that takes in an `EntryRepresentation`.
     - Outside of the loop, call `saveToPersistentStore()` to persist the changes and effectively synchronize the data in the device's persistent store with the data on the server.  Since you are using an `NSFetchedResultsController`, as soon as you save the managed object context, the fetched results controller will observe those changes and automatically update the table view with the updated entries.
